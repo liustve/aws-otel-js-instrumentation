@@ -20,7 +20,7 @@ const { SNSClient, CreateTopicCommand, GetTopicAttributesCommand } = require('@a
 const { SecretsManagerClient, CreateSecretCommand, DescribeSecretCommand } = require('@aws-sdk/client-secrets-manager');
 const { SFNClient, CreateStateMachineCommand, CreateActivityCommand, DescribeStateMachineCommand, DescribeActivityCommand } = require('@aws-sdk/client-sfn');
 const { IAMClient, AttachRolePolicyCommand, CreateRoleCommand } = require('@aws-sdk/client-iam')
-const { LambdaClient, CreateFunctionCommand, GetEventSourceMappingCommand, CreateEventSourceMappingCommand, UpdateEventSourceMappingCommand, ListEventSourceMappingsCommand } = require('@aws-sdk/client-lambda');
+const { LambdaClient, CreateFunctionCommand, GetEventSourceMappingCommand, CreateEventSourceMappingCommand, UpdateEventSourceMappingCommand } = require('@aws-sdk/client-lambda');
 
 
 const _PORT = 8080;
@@ -133,7 +133,7 @@ async function prepareAwsServer() {
         ShardCount: 1,
       }))
 
-          // Set up SecretsManager
+    // Set up SecretsManager
     await secretsClient.send(
       new CreateSecretCommand({
         "Description": "My test secret",
@@ -146,16 +146,17 @@ async function prepareAwsServer() {
     await snsClient.send(new CreateTopicCommand({
       "Name": "TestTopic"
     }))
-    
-    // Set up StepFunctions
-    await setupSfn()
 
     // Set up Lambda
     await setupLambda()
 
+    // Set up StepFunctions
+    await setupSfn()
+    
   } catch (error) {
     console.error('Unexpected exception occurred', error);
   }
+
 }
 
 const server = http.createServer(async (req, res) => {
@@ -172,7 +173,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(405);
     res.end();
   }
-});
+})
 
 async function handleGetRequest(req, res, path) {
   if (path.includes('s3')) {
@@ -915,8 +916,8 @@ async function handleSnsRequest(req, res, path) {
   });
 
     if (path.includes(_ERROR)) {
-
       res.statusCode = 404;
+
       try {
         await snsClient.send(
           new GetTopicAttributesCommand({
@@ -969,7 +970,7 @@ async function handleLambdaRequest(req, res, path) {
 
   if (path.includes(_ERROR)) {
     res.statusCode = 404;
-
+    
     try {
       await lambdaClient.send(
         new GetEventSourceMappingCommand({
@@ -986,7 +987,7 @@ async function handleLambdaRequest(req, res, path) {
   if (path.includes(_FAULT)) {
     res.statusCode = 500;
     statusCodeForFault = 500;
-    
+
     try {
       const faultLambdaClient = new LambdaClient({
         endpoint: _FAULT_ENDPOINT,
@@ -1007,24 +1008,12 @@ async function handleLambdaRequest(req, res, path) {
   
 
   if (path.includes('geteventsourcemapping')) {
-    const eventSources = await lambdaClient.send(
-      new ListEventSourceMappingsCommand({
-        FunctionName: "testFunction",
+    await lambdaClient.send(
+      new GetEventSourceMappingCommand({
+        UUID: ''
       })
-    );
-
-    if (eventSources.EventSourceMappings.length > 0) {
-      await lambdaClient.send(
-        new GetEventSourceMappingCommand({
-          UUID: eventSources.EventSourceMappings[0].UUID
-        })
-      ); 
-    }
-    else {
-      throw new Error('No event source mappings found');
-    }
+    ); 
   }
-
   res.end();
 }
 
@@ -1050,6 +1039,8 @@ async function setupLambda() {
     }]
   };
 
+  const functionName = 'testFunction'
+
   const lambdaRoleParams = {
     RoleName: "LambdaRole",
     AssumeRolePolicyDocument: JSON.stringify(trustPolicy),
@@ -1071,7 +1062,7 @@ async function setupLambda() {
     Code: {
       ZipFile: zipBuffer
     },
-    FunctionName: "testFunction",
+    FunctionName: functionName,
     Handler: "index.handler",
     Role: role.Role.Arn,
     Runtime: "nodejs18.x"
@@ -1079,9 +1070,9 @@ async function setupLambda() {
 
   const mappingParams = {
     EventSourceArn: "arn:aws:sns:us-west-2:000000000000:TestTopic",
-    FunctionName: "testFunction",
-    Enabled: false,
-  };
+    FunctionName: functionName,
+    Enabled: false
+  }
 
   await lambdaClient.send(new CreateFunctionCommand(functionParams));
   await lambdaClient.send(new CreateEventSourceMappingCommand(mappingParams));

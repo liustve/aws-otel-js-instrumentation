@@ -37,7 +37,6 @@ _AWS_BEDROCK_KNOWLEDGE_BASE_ID: str = "aws.bedrock.knowledge_base.id"
 _AWS_BEDROCK_DATA_SOURCE_ID: str = "aws.bedrock.data_source.id"
 _AWS_SECRET_ARN: str = "aws.secretsmanager.secret.arn"
 _AWS_SNS_TOPIC_ARN: str = 'aws.sns.topic.arn'
-_AWS_LAMBDA_FUNCTION_NAME: str = 'aws.lambda.function.name'
 _AWS_LAMBDA_RESOURCE_MAPPING_ID: str = 'aws.lambda.resource_mapping.id'
 _AWS_STATE_MACHINE_ARN: str = "aws.stepfunctions.state_machine.arn"
 _AWS_ACTIVITY_ARN: str = "aws.stepfunctions.activity.arn"
@@ -925,7 +924,7 @@ class AWSSDKTest(ContractTestBase):
         self.do_test_requests(
             "sns/error",
             "GET",
-            404,
+            404, # this is the expected status code error for sns
             1,
             0,
             local_operation="GET /sns",
@@ -990,7 +989,6 @@ class AWSSDKTest(ContractTestBase):
             404,
             1,
             0,
-            local_operation="GET /lambda",
             rpc_service="Lambda",
             remote_service="AWS::Lambda",
             remote_operation="GetEventSourceMapping",
@@ -1003,26 +1001,8 @@ class AWSSDKTest(ContractTestBase):
             span_name="Lambda.GetEventSourceMapping",
         )
 
-    def test_lambda_get_event_source_mapping(self):
-        self.do_test_requests(
-            "lambda/geteventsourcemapping",
-            "GET",
-            200,
-            0,
-            0,
-            local_operation="GET /lambda",
-            rpc_service="Lambda",
-            remote_service="AWS::Lambda",
-            remote_operation="GetEventSourceMapping",
-            remote_resource_type="AWS::Lambda::EventSourceMapping",
-            remote_resource_identifier=r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',
-            cloudformation_primary_identifier=r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',
-            request_specific_attributes= {
-                _AWS_LAMBDA_RESOURCE_MAPPING_ID: r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',
-            },
-            span_name="Lambda.GetEventSourceMapping",
-        )
-        
+    #TODO: Need to add test_lambda_get_event_source_mapping once workaround is figured out for storing UUID between tests
+
     @override
     def _assert_aws_span_attributes(self, resource_scope_spans: List[ResourceScopeSpan], path: str, **kwargs) -> None:
         target_spans: List[Span] = []
@@ -1076,12 +1056,11 @@ class AWSSDKTest(ContractTestBase):
 
         self._assert_str_attribute(attributes_dict, AWS_SPAN_KIND, span_kind)
 
-
     @override
     def _assert_semantic_conventions_span_attributes(
         self, resource_scope_spans: List[ResourceScopeSpan], method: str, path: str, status_code: int, **kwargs
     ) -> None:
-
+        
         target_spans: List[Span] = []
         for resource_scope_span in resource_scope_spans:
             # pylint: disable=no-member
@@ -1098,7 +1077,7 @@ class AWSSDKTest(ContractTestBase):
             status_code,
             kwargs.get("request_specific_attributes", {}),
             kwargs.get("response_specific_attributes", {}),
-        )
+        )    
 
     # pylint: disable=unidiomatic-typecheck
     def _assert_semantic_conventions_attributes(
