@@ -27,8 +27,8 @@ import { SinonStub } from 'sinon';
 const _STREAM_NAME: string = 'streamName';
 const _BUCKET_NAME: string = 'bucketName';
 const _QUEUE_NAME: string = 'queueName';
-const _ACTIVITY_ARN: string = 'arn:aws:states:us-east-1:007003123456789012:activity:testActivity';
-const _STATE_MACHINE_ARN: string = 'arn:aws:states:us-east-1:007003123456789012:stateMachine:testStateMachine';
+const _ACTIVITY_ARN: string = 'arn:aws:states:us-east-1:123456789123:activity:testActivity';
+const _STATE_MACHINE_ARN: string = 'arn:aws:states:us-east-1:123456789123:stateMachine:testStateMachine';
 const _SECRETS_ARN: string = 'arn:aws:secretsmanager:us-east-1:123456789123:secret:testId123456';
 const _UUID: string = 'random-uuid';
 const _TOPIC_ARN: string = 'arn:aws:sns:us-east-1:123456789012:mystack-mytopic-NZJ5JSMVGFIE';
@@ -59,15 +59,18 @@ describe('InstrumentationPatchTest', () => {
     // Not from patching
     expect(services.has('SQS')).toBeTruthy();
     expect(services.has('SNS')).toBeTruthy();
-    expect(services.has('DynamoDB')).toBeTruthy();
     expect(services.has('Lambda')).toBeTruthy();
+
+    expect(services.has('DynamoDB')).toBeTruthy();
     // From patching but shouldn't be applied
-    expect(services.get('SNS').requestPreSpanHook).toBeTruthy();
-    expect(services.get('Lambda').requestPreSpanHook).toBeTruthy();
     expect(services.get('SecretsManager')).toBeFalsy();
     expect(services.get('SFN')).toBeFalsy();
     expect(services.has('S3')).toBeFalsy();
     expect(services.has('Kinesis')).toBeFalsy();
+    expect(services.get('SNS')._requestPreSpanHook).toBeFalsy();
+    expect(services.get('SNS').requestPreSpanHook).toBeTruthy();
+    expect(services.get('Lambda')._requestPreSpanHook).toBeFalsy();
+    expect(services.get('Lambda').requestPreSpanHook).toBeTruthy();
     expect(services.get('SQS')._requestPreSpanHook).toBeFalsy();
     expect(services.get('SQS').requestPreSpanHook).toBeTruthy();
     expect(services.has('Bedrock')).toBeFalsy();
@@ -88,13 +91,16 @@ describe('InstrumentationPatchTest', () => {
     expect(services.has('SNS')).toBeTruthy();
     expect(services.has('DynamoDB')).toBeTruthy();
     expect(services.has('Lambda')).toBeTruthy();
+
     // From patching
-    expect(services.get('SNS').requestPreSpanHook).toBeTruthy();
-    expect(services.get('Lambda').requestPreSpanHook).toBeTruthy();
     expect(services.has('SecretsManager')).toBeTruthy();
     expect(services.has('SFN')).toBeTruthy();
     expect(services.has('S3')).toBeTruthy();
     expect(services.has('Kinesis')).toBeTruthy();
+    expect(services.get('SNS')._requestPreSpanHook).toBeTruthy();
+    expect(services.get('SNS').requestPreSpanHook).toBeTruthy();
+    expect(services.get('Lambda')._requestPreSpanHook).toBeTruthy();
+    expect(services.get('Lambda').requestPreSpanHook).toBeTruthy();
     expect(services.get('SQS')._requestPreSpanHook).toBeTruthy();
     expect(services.get('SQS').requestPreSpanHook).toBeTruthy();
     expect(services.has('Bedrock')).toBeTruthy();
