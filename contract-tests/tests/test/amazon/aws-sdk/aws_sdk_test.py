@@ -33,6 +33,7 @@ _AWS_SQS_QUEUE_NAME: str = "aws.sqs.queue.name"
 _AWS_KINESIS_STREAM_NAME: str = "aws.kinesis.stream.name"
 _AWS_BEDROCK_AGENT_ID: str = "aws.bedrock.agent.id"
 _AWS_BEDROCK_GUARDRAIL_ID: str = "aws.bedrock.guardrail.id"
+_AWS_BEDROCK_GUARDRAIL_ARN: str = "aws.bedrock.guardrail.arn"
 _AWS_BEDROCK_KNOWLEDGE_BASE_ID: str = "aws.bedrock.knowledge_base.id"
 _AWS_BEDROCK_DATA_SOURCE_ID: str = "aws.bedrock.data_source.id"
 _AWS_SECRET_ARN: str = "aws.secretsmanager.secret.arn"
@@ -650,6 +651,7 @@ class AWSSDKTest(ContractTestBase):
             cloudformation_primary_identifier="bt4o77i015cu",
             request_specific_attributes={
                 _AWS_BEDROCK_GUARDRAIL_ID: "bt4o77i015cu",
+                _AWS_BEDROCK_GUARDRAIL_ARN: "arn:aws:bedrock:us-east-1:000000000000:guardrail/bt4o77i015cu"
             },
             span_name="Bedrock.GetGuardrail",
         )
@@ -692,6 +694,27 @@ class AWSSDKTest(ContractTestBase):
                 _AWS_BEDROCK_KNOWLEDGE_BASE_ID: "test-knowledge-base-id",
             },
             span_name="BedrockAgentRuntime.Retrieve",
+        )
+
+    def test_bedrock_agent_associate_agent_knowledge_base(self):
+        self.do_test_requests(
+            "bedrock/associateagent/associate_agent_knowledge_base",
+            "GET",
+            200,
+            0,
+            0,
+            local_operation="GET /bedrock",
+            rpc_service="BedrockAgentRuntime",
+            remote_service="AWS::Bedrock",
+            remote_operation="AssociateAgentKnowledgeBase",
+            remote_resource_type="AWS::Bedrock::Agent",
+            remote_resource_identifier="Q08WFRPHVL",
+            cloudformation_primary_identifier="test-knowledge-base-id|Q08WFRPHVL",
+            request_specific_attributes={
+                _AWS_BEDROCK_AGENT_ID: "Q08WFRPHVL",
+                _AWS_BEDROCK_KNOWLEDGE_BASE_ID: "test-knowledge-base-id",
+            },
+            span_name="BedrockAgentRuntime.AssociateAgentKnowledgeBase",
         )
 
     def test_bedrock_agent_get_agent(self):
