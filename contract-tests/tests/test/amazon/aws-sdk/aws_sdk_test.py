@@ -827,7 +827,7 @@ class AWSSDKTest(ContractTestBase):
             local_operation="GET /stepfunctions",
             local_operation_2="POST /",
             rpc_service="SFN",
-            remote_service="AWS::SFN",
+            remote_service="AWS::StepFunctions",
             remote_operation="DescribeStateMachine",
             remote_resource_type="AWS::StepFunctions::StateMachine",
             remote_resource_identifier="invalid-state-machine",
@@ -847,7 +847,7 @@ class AWSSDKTest(ContractTestBase):
             0,
             local_operation="GET /stepfunctions",
             rpc_service="SFN",
-            remote_service="AWS::SFN",
+            remote_service="AWS::StepFunctions",
             remote_operation="DescribeStateMachine",
             remote_resource_type="AWS::StepFunctions::StateMachine",
             remote_resource_identifier="nonExistentStateMachine",
@@ -867,7 +867,7 @@ class AWSSDKTest(ContractTestBase):
             0,
             local_operation="GET /stepfunctions",
             rpc_service="SFN",
-            remote_service="AWS::SFN",
+            remote_service="AWS::StepFunctions",
             remote_operation="DescribeStateMachine",
             remote_resource_type="AWS::StepFunctions::StateMachine",
             remote_resource_identifier="TestStateMachine",
@@ -887,7 +887,7 @@ class AWSSDKTest(ContractTestBase):
             0,
             local_operation="GET /stepfunctions",
             rpc_service="SFN",
-            remote_service="AWS::SFN",
+            remote_service="AWS::StepFunctions",
             remote_operation="DescribeActivity",
             remote_resource_type="AWS::StepFunctions::Activity",
             remote_resource_identifier="TestActivity",
@@ -917,7 +917,7 @@ class AWSSDKTest(ContractTestBase):
             request_specific_attributes= {
                 _AWS_SNS_TOPIC_ARN: "arn:aws:sns:us-west-2:000000000000:invalidTopic",
             },
-            span_name="SNS.GetTopicAttributes",
+            span_name="SNS GetTopicAttributes",
         )
 
     def test_sns_error(self):
@@ -937,7 +937,7 @@ class AWSSDKTest(ContractTestBase):
             request_specific_attributes= {
                 _AWS_SNS_TOPIC_ARN: "arn:aws:sns:us-west-2:000000000000:nonExistentTopic",
             },
-            span_name="SNS.GetTopicAttributes",
+            span_name="SNS GetTopicAttributes",
         )
 
     def test_sns_get_topic_attributes(self):
@@ -957,7 +957,7 @@ class AWSSDKTest(ContractTestBase):
             request_specific_attributes= {
                 _AWS_SNS_TOPIC_ARN: "arn:aws:sns:us-west-2:000000000000:TestTopic",
             },
-            span_name="SNS.GetTopicAttributes",
+            span_name="SNS GetTopicAttributes",
         )
 
     def test_lambda_fault(self):
@@ -989,6 +989,7 @@ class AWSSDKTest(ContractTestBase):
             404,
             1,
             0,
+            local_operation="GET /lambda",
             rpc_service="Lambda",
             remote_service="AWS::Lambda",
             remote_operation="GetEventSourceMapping",
