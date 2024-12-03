@@ -61,6 +61,7 @@ const knowledgeBaseOperationAttributeKeyMapping = {
 };
 const dataSourceOperationAttributeKeyMapping = {
   [AWS_ATTRIBUTE_KEYS.AWS_BEDROCK_DATA_SOURCE_ID]: DATA_SOURCE_ID,
+  [AWS_ATTRIBUTE_KEYS.AWS_BEDROCK_KNOWLEDGE_BASE_ID]: KNOWLEDGE_BASE_ID,
 };
 
 // This map allows us to get all relevant attribute key mappings for a given operation
@@ -91,7 +92,7 @@ export class BedrockAgentServiceExtension implements ServiceExtension {
     const isIncoming = false;
     const spanKind: SpanKind = SpanKind.CLIENT;
     let spanName: string | undefined;
-
+    
     const operation: string = request.commandName;
     if (operation && operationToBedrockAgentAttributesMap[operation]) {
       const bedrockAgentServiceInfo = operationToBedrockAgentAttributesMap[operation];
@@ -117,6 +118,7 @@ export class BedrockAgentServiceExtension implements ServiceExtension {
     const operation: string = response.request.commandName;
     if (operation && operationToBedrockAgentAttributesMap[operation]) {
       const bedrockAgentServiceInfo = operationToBedrockAgentAttributesMap[operation];
+
       for (const serviceInfo of Object.entries(bedrockAgentServiceInfo)) {
         const [attributeKey, responseParamKey] = serviceInfo;
         const responseParamValue = response.data[responseParamKey];
