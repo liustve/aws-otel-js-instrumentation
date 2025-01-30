@@ -208,7 +208,7 @@ jobs:
           echo "" >> release_notes.md
           echo "Lambda Layer ARNs:" >> release_notes.md
           echo "" >> release_notes.md
-          cat ../layer-note >> release_notes.md
+          cat layer-note >> release_notes.md
           echo "" >> release_notes.md
           echo "Notes:" >> release_notes.md
 
