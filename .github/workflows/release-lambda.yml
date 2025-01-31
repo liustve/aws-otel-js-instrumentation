@@ -198,7 +198,7 @@ jobs:
           
       - name: Create Release Notes
         run: |
-          echo "Release AWSOpenTelemetryDistroJs Lambda Layer" > release_notes.md
+          echo "AWS OpenTelemetry Lambda Layer for JavaScript version ${{ github.event.inputs.version }}-${{ steps.commit.outputs.sha_short }}" > release_notes.md
           echo "" >> release_notes.md
           echo "Lambda Layer ARNs:" >> release_notes.md
           echo "" >> release_notes.md
@@ -211,9 +211,10 @@ jobs:
         run: |
           gh release create \
             --target "$GITHUB_REF_NAME" \
-            --title "Release AWSOpenTelemetryDistroJs Lambda Layer" \
+            --title "Release lambda-v${{ github.event.inputs.version }}-${{ steps.commit.outputs.sha_short }}" \
             --notes-file release_notes.md \
             --draft \
-            "v${{ steps.commit.outputs.sha_short }}" \
+            "lambda-v${{ github.event.inputs.version }}-${{ steps.commit.outputs.sha_short }}" \
             lambda-layer/terraform/lambda/layer.tf
+          echo Removing release_notes.md ...
           rm -f release_notes.md
