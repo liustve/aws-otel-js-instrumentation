@@ -199,6 +199,7 @@ jobs:
           echo "sha_short=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_OUTPUT
           
       - name: Create Release Notes
+        working-directory: ${{ env.LAYER_NAME }}
         run: |
           echo "Release AWSOpenTelemetryDistroJs Lambda Layer" > release_notes.md
           echo "" >> release_notes.md
