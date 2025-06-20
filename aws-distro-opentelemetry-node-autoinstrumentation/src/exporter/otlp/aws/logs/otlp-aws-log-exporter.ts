@@ -8,6 +8,7 @@ import { ReadableLogRecord } from '@opentelemetry/sdk-logs';
 import { AwsAuthenticator } from '../common/aws-authenticator';
 import { ExportResult, ExportResultCode } from '@opentelemetry/core';
 import { PassthroughSerializer } from '../common/passthrough-serializer';
+import { diag } from '@opentelemetry/api';
 
 /**
  * This exporter extends the functionality of the OTLPProtoLogExporter to allow spans to be exported
@@ -91,6 +92,8 @@ export class OTLPAwsLogExporter extends OTLPProtoLogExporter {
 
       const newHeaders: () => Record<string, string> = () => signedRequest;
       this['_delegate']._transport._transport._parameters.headers = newHeaders;
+    } else {
+      diag.debug('Delegate headers is undefined - unable to authenticate request to CloudWatch Logs OTLP endpoint');
     }
 
     super.export(items, resultCallback);

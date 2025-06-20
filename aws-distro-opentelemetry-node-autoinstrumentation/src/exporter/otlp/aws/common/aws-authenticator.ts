@@ -22,6 +22,8 @@ if (getNodeVersion() >= 16) {
 } else {
   diag.error('SigV4 signing requires at least Node major version 16');
 }
+// See: https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-authenticating-requests.html
+const SIG_V4_HEADERS = ['x-amz-date', 'authorization', 'x-amz-content-sha256', 'x-amz-security-token'];
 
 export class AwsAuthenticator {
   private region: string;
@@ -80,10 +82,9 @@ export class AwsAuthenticator {
   // Cleans up Sigv4 from headers to avoid accidentally copying them to the new headers
   private removeSigV4Headers(headers: Record<string, string>) {
     const newHeaders: Record<string, string> = {};
-    const sigV4Headers = ['x-amz-date', 'authorization', 'x-amz-content-sha256', 'x-amz-security-token'];
 
     for (const key in headers) {
-      if (!sigV4Headers.includes(key.toLowerCase())) {
+      if (!SIG_V4_HEADERS.includes(key.toLowerCase())) {
         newHeaders[key] = headers[key];
       }
     }

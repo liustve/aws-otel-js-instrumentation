@@ -8,6 +8,7 @@ import { ExportResult, ExportResultCode } from '@opentelemetry/core';
 import { AwsAuthenticator } from '../common/aws-authenticator';
 import { PassthroughSerializer } from '../common/passthrough-serializer';
 import { gzipSync } from 'zlib';
+import { diag } from '@opentelemetry/api';
 
 /**
  * This exporter extends the functionality of the OTLPProtoTraceExporter to allow spans to be exported
@@ -80,6 +81,8 @@ export class OTLPAwsSpanExporter extends OTLPProtoTraceExporter {
       // See type: https://github.com/open-telemetry/opentelemetry-js/blob/experimental/v0.57.1/experimental/packages/otlp-exporter-base/src/transport/http-transport-types.ts#L31
       const newHeaders: () => Record<string, string> = () => signedRequest;
       this['_delegate']._transport._transport._parameters.headers = newHeaders;
+    } else {
+      diag.debug('Delegate headers is undefined - unable to authenticate request to XRay OTLP endpoint');
     }
 
     super.export(items, resultCallback);
