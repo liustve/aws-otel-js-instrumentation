@@ -44,8 +44,8 @@ export class OTLPAwsSpanExporter extends OTLPProtoTraceExporter {
   }
 
   /**
-   * Overrides the upstream implementation of export. 
-   * All behaviors are the same except if the endpoint is an XRay OTLP endpoint, we will sign the request with SigV4 
+   * Overrides the upstream implementation of export.
+   * All behaviors are the same except if the endpoint is an XRay OTLP endpoint, we will sign the request with SigV4
    * in headers before sending it to the endpoint.
    * To prevent performance degradation from serializing and compressing data twice, we handle serialization and compression
    * locally in this exporter and pass the pre-processed data to the upstream export functionality.
@@ -62,7 +62,7 @@ export class OTLPAwsSpanExporter extends OTLPProtoTraceExporter {
     }
 
     const shouldCompress = this.compression && this.compression !== CompressionAlgorithm.NONE;
-    
+
     if (shouldCompress) {
       serializedSpans = gzipSync(serializedSpans);
     }

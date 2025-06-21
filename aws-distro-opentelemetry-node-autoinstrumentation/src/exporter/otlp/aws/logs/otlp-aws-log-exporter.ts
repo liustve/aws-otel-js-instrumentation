@@ -65,7 +65,7 @@ export class OTLPAwsLogExporter extends OTLPProtoLogExporter {
     }
 
     const shouldCompress = this.compression && this.compression !== CompressionAlgorithm.NONE;
-    
+
     if (shouldCompress) {
       serializedLogs = gzipSync(serializedLogs);
     }
