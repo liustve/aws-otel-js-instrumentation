@@ -36,7 +36,7 @@ describe('OTLPAwsLogExporter', () => {
       '../common/aws-authenticator': {
         AwsAuthenticator: class MockAwsAuthenticator {
           constructor() {}
-          async authenticate(endpoint: string, headers: Record<string, string>) {
+          async authenticate(headers: Record<string, string>, serializedData: Uint8Array | undefined) {
             return {
               ...headers,
               [AUTHORIZATION_HEADER]: EXPECTED_AUTH_HEADER,
@@ -61,6 +61,7 @@ describe('OTLPAwsLogExporter', () => {
       .then(() => {
         scope.on('request', (req, interceptor, body) => {
           const headers = req.headers;
+          console.log('SDJASDJAJSDAJSDJJDAJSDJAS' + JSON.stringify(req.headers));
           expect(headers).toHaveProperty(AUTHORIZATION_HEADER.toLowerCase());
           expect(headers).toHaveProperty(X_AMZ_SECURITY_TOKEN_HEADER.toLowerCase());
           expect(headers).toHaveProperty(X_AMZ_DATE_HEADER.toLowerCase());

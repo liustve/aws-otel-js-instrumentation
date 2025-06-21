@@ -21,7 +21,6 @@ import { diag } from '@opentelemetry/api';
 export class OTLPAwsSpanExporter extends OTLPProtoTraceExporter {
   private compression: CompressionAlgorithm | undefined;
   private endpoint: string;
-  private region: string;
   private serializer: PassthroughSerializer<IExportTraceServiceResponse>;
   private authenticator: AwsAuthenticator;
 
@@ -33,9 +32,8 @@ export class OTLPAwsSpanExporter extends OTLPProtoTraceExporter {
     };
 
     super(modifiedConfig);
-    this.region = endpoint.split('.')[1];
     this.endpoint = endpoint;
-    this.authenticator = new AwsAuthenticator(this.region, 'xray');
+    this.authenticator = new AwsAuthenticator(this.endpoint, 'xray');
 
     // This is used in order to prevent serializing and compressing the data twice. Once for signing Sigv4 and
     // once when we pass the data to super.export() which will serialize and compress the data again.
@@ -81,7 +79,7 @@ export class OTLPAwsSpanExporter extends OTLPProtoTraceExporter {
         delete headers['Content-Encoding'];
       }
 
-      const signedRequestHeaders = await this.authenticator.authenticate(this.endpoint, headers, serializedSpans);
+      const signedRequestHeaders = await this.authenticator.authenticate(headers, serializedSpans);
 
       if ('authorization' in signedRequestHeaders) {
         this['_delegate']._transport._transport._parameters.headers = () => signedRequestHeaders;

@@ -26,35 +26,30 @@ if (getNodeVersion() >= 16) {
 const SIG_V4_HEADERS = ['x-amz-date', 'authorization', 'x-amz-content-sha256', 'x-amz-security-token'];
 
 export class AwsAuthenticator {
+  private endpoint: URL;
   private region: string;
   private service: string;
 
-  constructor(region: string, service: string) {
-    this.region = region;
+  constructor(endpoint: string, service: string) {
+    this.endpoint = new URL(endpoint);
+    this.region = endpoint.split('.')[1];
     this.service = service;
   }
 
-  public async authenticate(endpoint: string, headers: Record<string, string>, serializedData: Uint8Array | undefined) {
+  public async authenticate(headers: Record<string, string>, serializedData: Uint8Array | undefined) {
     // Only do SigV4 Signing if the required dependencies are installed.
-    if (dependenciesLoaded) {
-      const url = new URL(endpoint);
-
-      if (serializedData === undefined) {
-        diag.error('Given serialized data is undefined. Not authenticating.');
-        return headers;
-      }
-
+    if (dependenciesLoaded && serializedData) {
       const cleanedHeaders = this.removeSigV4Headers(headers);
 
       const request = new HttpRequest({
         method: 'POST',
         protocol: 'https',
-        hostname: url.hostname,
-        path: url.pathname,
+        hostname: this.endpoint.hostname,
+        path: this.endpoint.pathname,
         body: serializedData,
         headers: {
           ...cleanedHeaders,
-          host: url.hostname,
+          host: this.endpoint.hostname,
         },
       });
 
@@ -74,6 +69,7 @@ export class AwsAuthenticator {
       }
     }
 
+    diag.debug('Given serialized data is undefined. Not authenticating.');
     return headers;
   }
 

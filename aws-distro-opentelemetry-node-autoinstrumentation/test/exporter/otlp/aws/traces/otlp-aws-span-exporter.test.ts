@@ -35,7 +35,7 @@ describe('OTLPAwsSpanExporter', () => {
       '../common/aws-authenticator': {
         AwsAuthenticator: class MockAwsAuthenticator {
           constructor() {}
-          async authenticate(endpoint: string, headers: Record<string, string>) {
+          async authenticate(headers: Record<string, string>, serializedData: Uint8Array | undefined) {
             return {
               ...headers,
               [AUTHORIZATION_HEADER]: EXPECTED_AUTH_HEADER,

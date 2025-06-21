@@ -54,8 +54,7 @@ describe('AwsAuthenticator', () => {
 
         const { AwsAuthenticator: MockThrowableModuleAuthenticator } = require(AWS_AUTH_PATH);
 
-        const result = await new MockThrowableModuleAuthenticator('us-east-1', 'xray').authenticate(
-          AWS_OTLP_TRACES_ENDPOINT,
+        const result = await new MockThrowableModuleAuthenticator(AWS_OTLP_TRACES_ENDPOINT, 'xray').authenticate(
           {},
           new Uint8Array()
         );
@@ -68,8 +67,8 @@ describe('AwsAuthenticator', () => {
   });
 
   it('should not inject SigV4 Headers if serialized data is undefined', async () => {
-    const authenticator = new AwsAuthenticator('us-east-1', 'xray');
-    const result = await authenticator.authenticate(AWS_OTLP_TRACES_ENDPOINT, {}, undefined);
+    const authenticator = new AwsAuthenticator(AWS_OTLP_TRACES_ENDPOINT, 'xray');
+    const result = await authenticator.authenticate({}, undefined);
 
     expect(result).not.toHaveProperty(AUTHORIZATION_HEADER);
     expect(result).not.toHaveProperty(X_AMZ_DATE_HEADER);
@@ -99,8 +98,7 @@ describe('AwsAuthenticator', () => {
       },
     }).AwsAuthenticator;
 
-    const result = await new AwsAuthenticatorWithMock('us-east-1', 'xray').authenticate(
-      AWS_OTLP_TRACES_ENDPOINT,
+    const result = await new AwsAuthenticatorWithMock(AWS_OTLP_TRACES_ENDPOINT, 'xray').authenticate(
       { test: 'test' },
       new Uint8Array()
     );
@@ -149,8 +147,7 @@ describe('AwsAuthenticator', () => {
       },
     }).AwsAuthenticator;
 
-    const result = await new AwsAuthenticatorWithMock('us-east-1', 'xray').authenticate(
-      AWS_OTLP_TRACES_ENDPOINT,
+    const result = await new AwsAuthenticatorWithMock(AWS_OTLP_TRACES_ENDPOINT, 'xray').authenticate(
       notExpected,
       new Uint8Array()
     );
