@@ -70,9 +70,7 @@ export class AwsAuthenticator {
 
         return signedRequest.headers;
       } catch (exception) {
-        diag.debug(
-          `Failed to sign/authenticate the given exported Span request to OTLP XRay endpoint with error: ${exception}`
-        );
+        diag.debug(`Failed to sign/authenticate the given export request with error: ${exception}`);
       }
     }
 

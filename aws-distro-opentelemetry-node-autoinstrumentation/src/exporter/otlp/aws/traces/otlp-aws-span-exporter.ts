@@ -29,21 +29,24 @@ export class OTLPAwsSpanExporter extends OTLPProtoTraceExporter {
     const modifiedConfig: OTLPExporterNodeConfigBase = {
       ...config,
       url: endpoint,
-      compression: CompressionAlgorithm.NONE,
+      compression: CompressionAlgorithm.NONE, // Setting Compression to NONE as compression will be handled here.
     };
 
     super(modifiedConfig);
     this.region = endpoint.split('.')[1];
     this.endpoint = endpoint;
     this.authenticator = new AwsAuthenticator(this.region, 'xray');
+
+    // This is used in order to prevent serializing and compressing the data twice. Once for signing Sigv4 and
+    // once when we pass the data to super.export() which will serialize and compress the data again.
     this.serializer = new PassthroughSerializer(ProtobufTraceSerializer.deserializeResponse);
     this['_delegate']._serializer = this.serializer;
   }
 
   /**
-   * Overrides the upstream implementation of export. All behaviors are the same except if the
-   * endpoint is an XRay OTLP endpoint, we will sign the request with SigV4 in headers before
-   * sending it to the endpoint. Otherwise, we will skip signing.
+   * Overrides the upstream implementation of export. 
+   * All behaviors are the same except if the endpoint is an XRay OTLP endpoint, we will sign the request with SigV4 
+   * in headers before sending it to the endpoint.
    * To prevent performance degradation from serializing and compressing data twice, we handle serialization and compression
    * locally in this exporter and pass the pre-processed data to the upstream export functionality.
    */
@@ -58,15 +61,17 @@ export class OTLPAwsSpanExporter extends OTLPProtoTraceExporter {
       return;
     }
 
-    // Pass pre-processed data to passthrough serializer. When super.export() is called, the Passthrough Serializer will
-    // use the pre-processed data instead of serializing and compressing the data again.
     const shouldCompress = this.compression && this.compression !== CompressionAlgorithm.NONE;
+    
     if (shouldCompress) {
       serializedSpans = gzipSync(serializedSpans);
     }
 
+    // Pass pre-processed data to passthrough serializer. When super.export() is called, the Passthrough Serializer will
+    // use the pre-processed data instead of serializing and compressing the data again.
     this.serializer.setSerializedData(serializedSpans);
 
+    // See type: https://github.com/open-telemetry/opentelemetry-js/blob/experimental/v0.57.1/experimental/packages/otlp-exporter-base/src/transport/http-transport-types.ts#L31
     const headers = this['_delegate']._transport?._transport?._parameters?.headers();
 
     if (headers) {
@@ -76,11 +81,11 @@ export class OTLPAwsSpanExporter extends OTLPProtoTraceExporter {
         delete headers['Content-Encoding'];
       }
 
-      const signedRequest = await this.authenticator.authenticate(this.endpoint, headers, serializedSpans);
+      const signedRequestHeaders = await this.authenticator.authenticate(this.endpoint, headers, serializedSpans);
 
-      // See type: https://github.com/open-telemetry/opentelemetry-js/blob/experimental/v0.57.1/experimental/packages/otlp-exporter-base/src/transport/http-transport-types.ts#L31
-      const newHeaders: () => Record<string, string> = () => signedRequest;
-      this['_delegate']._transport._transport._parameters.headers = newHeaders;
+      if ('authorization' in signedRequestHeaders) {
+        this['_delegate']._transport._transport._parameters.headers = () => signedRequestHeaders;
+      }
     } else {
       diag.debug('Delegate headers is undefined - unable to authenticate request to XRay OTLP endpoint');
     }

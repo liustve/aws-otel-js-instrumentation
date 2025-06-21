@@ -18,7 +18,6 @@ import { diag } from '@opentelemetry/api';
  *
  * This only works with version >=16 Node.js environments.
  */
-
 export class OTLPAwsLogExporter extends OTLPProtoLogExporter {
   private compression: CompressionAlgorithm | undefined;
   private endpoint: string;
@@ -30,7 +29,7 @@ export class OTLPAwsLogExporter extends OTLPProtoLogExporter {
     const modifiedConfig: OTLPExporterNodeConfigBase = {
       ...config,
       url: endpoint,
-      compression: CompressionAlgorithm.NONE,
+      compression: CompressionAlgorithm.NONE, // Setting Compression to NONE as compression will be handled here.
     };
 
     super(modifiedConfig);
@@ -51,10 +50,6 @@ export class OTLPAwsLogExporter extends OTLPProtoLogExporter {
    * To prevent performance degradation from serializing and compressing data twice, we handle serialization and compression
    * locally in this exporter and pass the pre-processed data to the upstream export functionality.
    */
-
-  // Upstream already implements a retry mechanism:
-  // https://github.com/open-telemetry/opentelemetry-js/blob/main/experimental/packages/otlp-exporter-base/src/retrying-transport.ts
-
   public override async export(
     items: ReadableLogRecord[],
     resultCallback: (result: ExportResult) => void
@@ -70,6 +65,7 @@ export class OTLPAwsLogExporter extends OTLPProtoLogExporter {
     }
 
     const shouldCompress = this.compression && this.compression !== CompressionAlgorithm.NONE;
+    
     if (shouldCompress) {
       serializedLogs = gzipSync(serializedLogs);
     }
@@ -88,10 +84,11 @@ export class OTLPAwsLogExporter extends OTLPProtoLogExporter {
         delete headers['Content-Encoding'];
       }
 
-      const signedRequest = await this.authenticator.authenticate(this.endpoint, headers, serializedLogs);
+      const signedRequestHeaders = await this.authenticator.authenticate(this.endpoint, headers, serializedLogs);
 
-      const newHeaders: () => Record<string, string> = () => signedRequest;
-      this['_delegate']._transport._transport._parameters.headers = newHeaders;
+      if ('authorization' in signedRequestHeaders) {
+        this['_delegate']._transport._transport._parameters.headers = () => signedRequestHeaders;
+      }
     } else {
       diag.debug('Delegate headers is undefined - unable to authenticate request to CloudWatch Logs OTLP endpoint');
     }
