@@ -61,9 +61,7 @@ describe('AwsAuthenticator', () => {
           'xray'
         ).authenticate({}, new Uint8Array());
 
-        expect(result).not.toHaveProperty(AUTHORIZATION_HEADER);
-        expect(result).not.toHaveProperty(X_AMZ_DATE_HEADER);
-        expect(result).not.toHaveProperty(X_AMZ_SECURITY_TOKEN_HEADER);
+        expect(result).toBe(undefined);
       });
     });
   });
@@ -72,10 +70,7 @@ describe('AwsAuthenticator', () => {
     const authenticator = new AwsAuthenticator('https://xray.us-east-1.amazonaws.com/v1/traces', 'xray');
     const result = await authenticator.authenticate({}, undefined);
 
-    expect(result).not.toHaveProperty(AUTHORIZATION_HEADER);
-    expect(result).not.toHaveProperty(X_AMZ_DATE_HEADER);
-    expect(result).not.toHaveProperty(X_AMZ_SECURITY_TOKEN_HEADER);
-    expect(result).not.toHaveProperty(X_AMZ_CONTENT_SHA256_HEADER);
+    expect(result).toBe(undefined);
   });
 
   it('should inject SigV4 Headers', async () => {
@@ -96,10 +91,7 @@ describe('AwsAuthenticator', () => {
       expect(result).toHaveProperty(X_AMZ_SECURITY_TOKEN_HEADER);
       expect(result).toHaveProperty(X_AMZ_CONTENT_SHA256_HEADER);
     } else {
-      expect(result).not.toHaveProperty(AUTHORIZATION_HEADER);
-      expect(result).not.toHaveProperty(X_AMZ_DATE_HEADER);
-      expect(result).not.toHaveProperty(X_AMZ_SECURITY_TOKEN_HEADER);
-      expect(result).not.toHaveProperty(X_AMZ_CONTENT_SHA256_HEADER);
+      expect(result).toBe(undefined);
     }
   });
 
