@@ -70,11 +70,12 @@ export class AwsAuthenticator {
         return signedRequest.headers;
       } catch (exception) {
         diag.debug(`Failed to sign/authenticate the given export request with error: ${exception}`);
+        return undefined;
       }
     }
 
     diag.debug('No serialized data provided. Not authenticating.');
-    return headers;
+    return undefined;
   }
 
   // Cleans up Sigv4 from headers to avoid accidentally copying them to the new headers

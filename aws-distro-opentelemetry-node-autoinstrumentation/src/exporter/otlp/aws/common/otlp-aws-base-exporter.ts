@@ -91,7 +91,7 @@ export abstract class OTLPAwsBaseExporter<Payload, Response> {
         serializedData
       );
 
-      if ('authorization' in signedRequestHeaders) {
+      if (signedRequestHeaders) {
         this.parentExporter['_delegate']._transport._transport._parameters.headers = () => signedRequestHeaders;
       }
 
