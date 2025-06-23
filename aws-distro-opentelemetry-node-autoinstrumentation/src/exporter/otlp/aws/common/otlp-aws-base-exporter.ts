@@ -13,9 +13,9 @@ import { diag } from '@opentelemetry/api';
  */
 export abstract class OTLPAwsBaseExporter<Payload, Response> {
   protected parentExporter: OTLPExporterBase<Payload>;
-  private readonly originalHeaders: Readonly<Record<string, string>>;
-  private newHeaders: Record<string, string>;
-  private compression?: CompressionAlgorithm;
+  private readonly originalHeaders?: Record<string, string>;
+  private readonly compression?: CompressionAlgorithm;
+  private newHeaders: Record<string, string> = {};
   private endpoint: string;
   private serializer: PassthroughSerializer<Response>;
   private authenticator: AwsAuthenticator;
@@ -41,11 +41,7 @@ export abstract class OTLPAwsBaseExporter<Payload, Response> {
     // https://github.com/open-telemetry/opentelemetry-js/blob/ec17ce48d0e5a99a122da5add612a20e2dd84ed5/experimental/packages/otlp-exporter-base/src/otlp-export-delegate.ts#L69
     this.serializer = new PassthroughSerializer<Response>(this.parentSerializer.deserializeResponse);
     this.parentExporter['_delegate']._serializer = this.serializer;
-
-    this.originalHeaders = OTLPAwsBaseExporter.deepCopy(
-      this.parentExporter['_delegate']._transport?._transport?._parameters?.headers()
-    );
-    this.newHeaders = {};
+    this.originalHeaders = this.getHeaders();
   }
 
   /**
@@ -84,50 +80,54 @@ export abstract class OTLPAwsBaseExporter<Payload, Response> {
 
       this.serializer.setSerializedData(serializedData);
 
-      const headers: Record<string, string> = { ...this.originalHeaders, ...this.newHeaders };
+      const mergedHeaders = { ...this.newHeaders, ...this.originalHeaders };
+      const signedHeaders = await this.authenticator.authenticate(mergedHeaders, serializedData);
 
-      const signedRequestHeaders: Record<string, string> = await this.authenticator.authenticate(
-        headers,
-        serializedData
-      );
-
-      if (signedRequestHeaders) {
-        this.parentExporter['_delegate']._transport._transport._parameters.headers = () => signedRequestHeaders;
+      if (signedHeaders) {
+        this.setTransportHeaders(signedHeaders);
       }
 
       this.parentExporter.export(items, resultCallback);
-      this.cleanupHeaders();
-    } else {
-      diag.debug('OTLP Exporter transport headers are undefined. Not exporting.');
+
+      this.setTransportHeaders(this.originalHeaders);
+      this.newHeaders = {};
+      return;
     }
+
+    resultCallback({
+      code: ExportResultCode.FAILED,
+      error: new Error('No headers found, cannot sign request. Not exporting.'),
+    });
   }
+
+  // This is a bit ugly but need it in order safely set any new headers
 
   /**
    * Adds a header to the exporter's transport parameters
-   * @param key - Header key
-   * @param value - Header value
    */
   protected addHeader(key: string, value: string): void {
-    // Do not override upstream's headers
-    if (!(key in this.originalHeaders)) {
-      this.newHeaders[key] = value;
+    this.newHeaders[key] = value;
+  }
+
+  /**
+   * Gets headers in the transport parameters
+   */
+  private getHeaders(): Record<string, string> | undefined {
+    const headersFunc = this.parentExporter['_delegate']._transport?._transport?._parameters?.headers;
+    if (!headersFunc) {
+      diag.debug('No existing headers found, using empty headers.');
+      return undefined;
     }
+    return headersFunc();
   }
 
   /**
-   * Restores headers to their original state before any modifications
+   * Sets headers in the transport parameters
    */
-  private cleanupHeaders(): void {
-    this.parentExporter['_delegate']._transport._transport._parameters.headers = () =>
-      OTLPAwsBaseExporter.deepCopy(this.originalHeaders);
-
-    this.newHeaders = {};
-  }
-
-  /**
-   * Creates a deep copy of the given object.
-   */
-  private static deepCopy(obj: Record<string, any> | undefined): Record<string, any> {
-    return obj ? JSON.parse(JSON.stringify(obj)) : {};
+  private setTransportHeaders(headers: Record<string, string>): void {
+    const parameters = this.parentExporter['_delegate']._transport?._transport?._parameters;
+    if (parameters) {
+      parameters.headers = () => headers;
+    }
   }
 }

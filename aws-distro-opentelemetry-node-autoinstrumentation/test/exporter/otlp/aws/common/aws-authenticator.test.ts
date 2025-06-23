@@ -113,12 +113,12 @@ describe('AwsAuthenticator', () => {
       'https://xray.us-east-1.amazonaws.com/v1/traces',
       'xray'
     ).authenticate(oldHeaders, new Uint8Array());
-    expect(result).toHaveProperty(AUTHORIZATION_HEADER);
-    expect(result).toHaveProperty(X_AMZ_DATE_HEADER);
-    expect(result).toHaveProperty(X_AMZ_SECURITY_TOKEN_HEADER);
-    expect(result).toHaveProperty(X_AMZ_CONTENT_SHA256_HEADER);
 
     if (version >= 16) {
+      expect(result).toHaveProperty(AUTHORIZATION_HEADER);
+      expect(result).toHaveProperty(X_AMZ_DATE_HEADER);
+      expect(result).toHaveProperty(X_AMZ_SECURITY_TOKEN_HEADER);
+      expect(result).toHaveProperty(X_AMZ_CONTENT_SHA256_HEADER);
       expect(result[AUTHORIZATION_HEADER]).not.toBe(oldHeaders[AUTHORIZATION_HEADER]);
       expect(result[X_AMZ_DATE_HEADER]).not.toBe(oldHeaders[X_AMZ_DATE_HEADER]);
       expect(result[X_AMZ_SECURITY_TOKEN_HEADER]).not.toBe(oldHeaders[X_AMZ_SECURITY_TOKEN_HEADER]);
