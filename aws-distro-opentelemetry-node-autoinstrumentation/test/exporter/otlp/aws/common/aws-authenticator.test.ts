@@ -124,10 +124,7 @@ describe('AwsAuthenticator', () => {
       expect(result[X_AMZ_SECURITY_TOKEN_HEADER]).not.toBe(oldHeaders[X_AMZ_SECURITY_TOKEN_HEADER]);
       expect(result[X_AMZ_CONTENT_SHA256_HEADER]).not.toBe(oldHeaders[X_AMZ_CONTENT_SHA256_HEADER]);
     } else {
-      expect(result[AUTHORIZATION_HEADER]).toBe(oldHeaders[AUTHORIZATION_HEADER]);
-      expect(result[X_AMZ_DATE_HEADER]).toBe(oldHeaders[X_AMZ_DATE_HEADER]);
-      expect(result[X_AMZ_SECURITY_TOKEN_HEADER]).toBe(oldHeaders[X_AMZ_SECURITY_TOKEN_HEADER]);
-      expect(result[X_AMZ_CONTENT_SHA256_HEADER]).toBe(oldHeaders[X_AMZ_CONTENT_SHA256_HEADER]);
+      expect(result).toBe(undefined);
     }
   });
 });
