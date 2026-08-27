@@ -13,6 +13,8 @@ If your change does not need a CHANGELOG entry, add the "skip changelog" label t
 
 ## Unreleased
 
+- fix(agent-observability): suppress invalid instrumentation startup logs
+  ([#531](https://github.com/aws-observability/aws-otel-js-instrumentation/pull/531))
 - fix(vercel-ai): align AI SDK compatibility
   ([#529](https://github.com/aws-observability/aws-otel-js-instrumentation/pull/529))
 - feat(agent-observability): capture the first user message and final agent response on OpenAI Agents and
