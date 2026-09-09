@@ -475,16 +475,19 @@ describe('AwsOpenTelemetryConfiguratorTest', () => {
     // Test application signals only
     let spanProcessors: SpanProcessor[] = [];
     AwsOpentelemetryConfigurator.customizeSpanProcessors(spanProcessors, emptyResource());
-    expect(spanProcessors.length).toEqual(1);
-    expect(spanProcessors[0]).toBeInstanceOf(BaggageSpanProcessor);
+    expect(spanProcessors.length).toEqual(2);
+    expect(spanProcessors[0]).toBeInstanceOf(AttributeRedactingSpanProcessor);
+    expect(spanProcessors[1]).toBeInstanceOf(BaggageSpanProcessor);
 
     process.env.OTEL_AWS_APPLICATION_SIGNALS_ENABLED = 'True';
     AwsOpentelemetryConfigurator.customizeSpanProcessors(spanProcessors, emptyResource());
-    expect(spanProcessors.length).toEqual(4);
-    expect(spanProcessors[0]).toBeInstanceOf(BaggageSpanProcessor);
-    expect(spanProcessors[1]).toBeInstanceOf(BaggageSpanProcessor);
-    expect(spanProcessors[2]).toBeInstanceOf(AttributePropagatingSpanProcessor);
-    expect(spanProcessors[3]).toBeInstanceOf(AwsSpanMetricsProcessor);
+    expect(spanProcessors.length).toEqual(6);
+    expect(spanProcessors[0]).toBeInstanceOf(AttributeRedactingSpanProcessor);
+    expect(spanProcessors[1]).toBeInstanceOf(AttributeRedactingSpanProcessor);
+    expect(spanProcessors[2]).toBeInstanceOf(BaggageSpanProcessor);
+    expect(spanProcessors[3]).toBeInstanceOf(BaggageSpanProcessor);
+    expect(spanProcessors[4]).toBeInstanceOf(AttributePropagatingSpanProcessor);
+    expect(spanProcessors[5]).toBeInstanceOf(AwsSpanMetricsProcessor);
     delete process.env.OTEL_AWS_APPLICATION_SIGNALS_ENABLED;
 
     try {
@@ -515,13 +518,14 @@ describe('AwsOpenTelemetryConfiguratorTest', () => {
     process.env.AGENT_OBSERVABILITY_ENABLED = 'true';
     process.env.OTEL_AWS_APPLICATION_SIGNALS_ENABLED = 'True';
     AwsOpentelemetryConfigurator.customizeSpanProcessors(spanProcessors, emptyResource());
-    expect(spanProcessors.length).toEqual(4);
+    expect(spanProcessors.length).toEqual(5);
 
     // Verify processors are added in the expected order
     expect(spanProcessors[0]).toBeInstanceOf(GenAINestedClientSpanProcessor);
-    expect(spanProcessors[1]).toBeInstanceOf(BaggageSpanProcessor);
-    expect(spanProcessors[2]).toBeInstanceOf(AttributePropagatingSpanProcessor);
-    expect(spanProcessors[3]).toBeInstanceOf(AwsSpanMetricsProcessor);
+    expect(spanProcessors[1]).toBeInstanceOf(AttributeRedactingSpanProcessor);
+    expect(spanProcessors[2]).toBeInstanceOf(BaggageSpanProcessor);
+    expect(spanProcessors[3]).toBeInstanceOf(AttributePropagatingSpanProcessor);
+    expect(spanProcessors[4]).toBeInstanceOf(AwsSpanMetricsProcessor);
 
     // shut down exporters for test cleanup
     spanProcessors.forEach(spanProcessor => {
@@ -534,13 +538,13 @@ describe('AwsOpenTelemetryConfiguratorTest', () => {
   it('CustomizeSpanProcessorsWithAgentObservabilityTest', () => {
     const spanProcessorsToTest: SpanProcessor[] = [];
 
-    // Test that only BaggageSpanProcessor is added when agent observability is disabled
+    // Test that redaction and baggage processors are added when agent observability is disabled
     delete process.env.AGENT_OBSERVABILITY_ENABLED;
     AwsOpentelemetryConfigurator.customizeSpanProcessors(spanProcessorsToTest, emptyResource());
-    expect(spanProcessorsToTest.length).toEqual(1);
+    expect(spanProcessorsToTest.length).toEqual(2);
 
-    // Verify the added processor is BaggageSpanProcessor
-    const addedProcessor = spanProcessorsToTest[0];
+    expect(spanProcessorsToTest[0]).toBeInstanceOf(AttributeRedactingSpanProcessor);
+    const addedProcessor = spanProcessorsToTest[1];
     expect(addedProcessor).toBeInstanceOf(BaggageSpanProcessor);
 
     // Clean up
@@ -854,10 +858,11 @@ describe('AwsOpenTelemetryConfiguratorTest', () => {
     process.env.AWS_LAMBDA_FUNCTION_NAME = 'TestFunction';
     const spanProcessors: SpanProcessor[] = [];
     AwsOpentelemetryConfigurator.customizeSpanProcessors(spanProcessors, emptyResource());
-    expect(spanProcessors.length).toEqual(3);
-    expect(spanProcessors[0]).toBeInstanceOf(BaggageSpanProcessor);
-    expect(spanProcessors[1]).toBeInstanceOf(AttributePropagatingSpanProcessor);
-    expect(spanProcessors[2]).toBeInstanceOf(AwsBatchUnsampledSpanProcessor);
+    expect(spanProcessors.length).toEqual(4);
+    expect(spanProcessors[0]).toBeInstanceOf(AttributeRedactingSpanProcessor);
+    expect(spanProcessors[1]).toBeInstanceOf(BaggageSpanProcessor);
+    expect(spanProcessors[2]).toBeInstanceOf(AttributePropagatingSpanProcessor);
+    expect(spanProcessors[3]).toBeInstanceOf(AwsBatchUnsampledSpanProcessor);
     delete process.env.OTEL_AWS_APPLICATION_SIGNALS_ENABLED;
     delete process.env.AWS_LAMBDA_FUNCTION_NAME;
   });

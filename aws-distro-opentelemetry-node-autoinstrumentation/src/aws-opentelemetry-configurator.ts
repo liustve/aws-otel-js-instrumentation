@@ -210,11 +210,6 @@ export class AwsOpentelemetryConfigurator {
     // default SpanProcessors with Span Exporters wrapped inside AwsMetricAttributesSpanExporter
     const awsSpanProcessorProvider: AwsSpanProcessorProvider = new AwsSpanProcessorProvider(this.resource);
     this.spanProcessors = awsSpanProcessorProvider.getSpanProcessors();
-
-    // This processor modifies attributes in onEnd, so it must run before exporter
-    // processors to ensure they observe the redacted values.
-    this.spanProcessors.unshift(new AttributeRedactingSpanProcessor());
-
     this.logRecordProcessors = AwsLoggerProcessorProvider.getlogRecordProcessors();
     AwsOpentelemetryConfigurator.customizeSpanProcessors(this.spanProcessors, this.resource);
 
@@ -321,6 +316,10 @@ export class AwsOpentelemetryConfigurator {
 
   static customizeSpanProcessors(spanProcessors: SpanProcessor[], resource: Resource): void {
     const baggageKeys: Set<string> = parseOtelBaggageKeysEnvVar();
+
+    // This processor modifies attributes in onEnd, so it must run before exporter
+    // processors to ensure they observe the redacted values.
+    spanProcessors.unshift(new AttributeRedactingSpanProcessor());
 
     if (isAgentObservabilityEnabled()) {
       // This processor modifies span kind in onEnd, so it must run before exporter
