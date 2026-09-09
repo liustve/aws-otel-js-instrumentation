@@ -63,6 +63,7 @@ import {
 import { SEMRESATTRS_TELEMETRY_AUTO_VERSION } from '@opentelemetry/semantic-conventions';
 import { AlwaysRecordSampler } from './always-record-sampler';
 import { AttributePropagatingSpanProcessorBuilder } from './attribute-propagating-span-processor-builder';
+import { AttributeRedactingSpanProcessor } from './attribute-redacting-span-processor';
 import { AwsBatchUnsampledSpanProcessor } from './aws-batch-unsampled-span-processor';
 import { AwsMetricAttributesSpanExporterBuilder } from './aws-metric-attributes-span-exporter-builder';
 import { AwsSpanMetricsProcessorBuilder } from './aws-span-metrics-processor-builder';
@@ -209,6 +210,11 @@ export class AwsOpentelemetryConfigurator {
     // default SpanProcessors with Span Exporters wrapped inside AwsMetricAttributesSpanExporter
     const awsSpanProcessorProvider: AwsSpanProcessorProvider = new AwsSpanProcessorProvider(this.resource);
     this.spanProcessors = awsSpanProcessorProvider.getSpanProcessors();
+
+    // This processor modifies attributes in onEnd, so it must run before exporter
+    // processors to ensure they observe the redacted values.
+    this.spanProcessors.unshift(new AttributeRedactingSpanProcessor());
+
     this.logRecordProcessors = AwsLoggerProcessorProvider.getlogRecordProcessors();
     AwsOpentelemetryConfigurator.customizeSpanProcessors(this.spanProcessors, this.resource);
 
