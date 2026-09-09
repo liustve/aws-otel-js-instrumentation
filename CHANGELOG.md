@@ -13,6 +13,8 @@ If your change does not need a CHANGELOG entry, add the "skip changelog" label t
 
 ## Unreleased
 
+- feat: redact span, span event, and span link attributes via ADOT_REDACT_SPAN_ATTRIBUTES
+  ([#550](https://github.com/aws-observability/aws-otel-js-instrumentation/pull/550))
 - fix(vercel-ai): map missing AI SDK telemetry to OTel GenAI attributes and output messages
   ([#543](https://github.com/aws-observability/aws-otel-js-instrumentation/pull/543))
 - fix(agent-observability): only demote duplicate nested GenAI client spans
