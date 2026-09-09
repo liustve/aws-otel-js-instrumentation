@@ -5,39 +5,59 @@ import { Attributes } from '@opentelemetry/api';
 import { ReadableSpan, SpanProcessor } from '@opentelemetry/sdk-trace-base';
 
 export const ENV_ADOT_REDACT_SPAN_ATTRIBUTES = 'ADOT_REDACT_SPAN_ATTRIBUTES';
+export const ENV_ADOT_REDACT_SPAN_EVENT_ATTRIBUTES = 'ADOT_REDACT_SPAN_EVENT_ATTRIBUTES';
 export const REDACTED_VALUE = 'REDACTED';
 
 /**
- * Redacts configured attributes on completed spans and their events.
+ * Redacts separately configured attributes on completed spans and span events.
  *
- * Attribute names can be supplied to the constructor or through the
- * ADOT_REDACT_SPAN_ATTRIBUTES environment variable as a comma-separated list.
- * Each entry can be an exact attribute name or contain * wildcards. Matching
- * attribute values are replaced with REDACTED in place while attribute names
- * and non-matching values remain unchanged.
+ * Span and span event attribute names can be supplied to the constructor or
+ * through the ADOT_REDACT_SPAN_ATTRIBUTES and
+ * ADOT_REDACT_SPAN_EVENT_ATTRIBUTES environment variables as comma-separated
+ * lists. Each entry can be an exact attribute name or contain * wildcards.
+ * Matching attribute values are replaced with REDACTED in place while
+ * attribute names and non-matching values remain unchanged.
  *
- * Redact several exact attributes, every attribute beginning with
- * http.request., and matching GenAI content attributes:
+ * Redact several exact span attributes and every span attribute beginning with
+ * http.request.:
  *
- * ADOT_REDACT_SPAN_ATTRIBUTES=user.email,request.body,db.statement,http.request.*,gen_ai.*.content
+ * ADOT_REDACT_SPAN_ATTRIBUTES=user.email,request.body,db.statement,http.request.*
  *
- * Redact every span and span event attribute:
+ * Redact matching GenAI content attributes from span events:
+ *
+ * ADOT_REDACT_SPAN_EVENT_ATTRIBUTES=gen_ai.*.content
+ *
+ * Redact every span attribute and every span event attribute:
  *
  * ADOT_REDACT_SPAN_ATTRIBUTES=*
+ * ADOT_REDACT_SPAN_EVENT_ATTRIBUTES=*
  */
 export class AttributeRedactingSpanProcessor implements SpanProcessor {
-  public readonly attributesToRedact: string[];
-  private readonly compiledPatterns: RegExp[];
+  public readonly spanAttributesToRedact: string[];
+  public readonly spanEventAttributesToRedact: string[];
+  private readonly compiledSpanAttributePatterns: RegExp[];
+  private readonly compiledSpanEventAttributePatterns: RegExp[];
 
-  public constructor(attributesToRedact?: string[]) {
-    this.attributesToRedact =
-      attributesToRedact && attributesToRedact.length > 0
-        ? [...attributesToRedact]
+  public constructor(spanAttributesToRedact?: string[], spanEventAttributesToRedact?: string[]) {
+    this.spanAttributesToRedact =
+      spanAttributesToRedact && spanAttributesToRedact.length > 0
+        ? [...spanAttributesToRedact]
         : (process.env[ENV_ADOT_REDACT_SPAN_ATTRIBUTES] ?? '')
             .split(',')
             .map(attribute => attribute.trim())
             .filter(attribute => attribute.length > 0);
-    this.compiledPatterns = this.attributesToRedact.map(attribute => {
+    this.spanEventAttributesToRedact =
+      spanEventAttributesToRedact && spanEventAttributesToRedact.length > 0
+        ? [...spanEventAttributesToRedact]
+        : (process.env[ENV_ADOT_REDACT_SPAN_EVENT_ATTRIBUTES] ?? '')
+            .split(',')
+            .map(attribute => attribute.trim())
+            .filter(attribute => attribute.length > 0);
+    this.compiledSpanAttributePatterns = this.spanAttributesToRedact.map(attribute => {
+      const pattern = attribute.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+      return new RegExp(`^${pattern}$`);
+    });
+    this.compiledSpanEventAttributePatterns = this.spanEventAttributesToRedact.map(attribute => {
       const pattern = attribute.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
       return new RegExp(`^${pattern}$`);
     });
@@ -46,28 +66,33 @@ export class AttributeRedactingSpanProcessor implements SpanProcessor {
   public onStart(): void {}
 
   public onEnd(span: ReadableSpan): void {
-    if (this.attributesToRedact.length === 0) {
+    if (this.spanAttributesToRedact.length === 0 && this.spanEventAttributesToRedact.length === 0) {
       return;
     }
 
-    this.redactAttributes(span.attributes);
-    span.events.forEach(event => this.redactAttributes(event.attributes));
+    if (this.spanAttributesToRedact.length > 0) {
+      this.redactAttributes(span.attributes, this.compiledSpanAttributePatterns);
+    }
+
+    if (this.spanEventAttributesToRedact.length > 0) {
+      span.events.forEach(event => this.redactAttributes(event.attributes, this.compiledSpanEventAttributePatterns));
+    }
   }
 
-  private redactAttributes(attributes?: Attributes): void {
+  private redactAttributes(attributes: Attributes | undefined, compiledPatterns: RegExp[]): void {
     if (!attributes) {
       return;
     }
 
     Object.keys(attributes).forEach(attributeName => {
-      if (this.shouldRedact(attributeName)) {
+      if (this.shouldRedact(attributeName, compiledPatterns)) {
         attributes[attributeName] = REDACTED_VALUE;
       }
     });
   }
 
-  private shouldRedact(attributeName: string): boolean {
-    return this.compiledPatterns.some(pattern => pattern.test(attributeName));
+  private shouldRedact(attributeName: string, compiledPatterns: RegExp[]): boolean {
+    return compiledPatterns.some(pattern => pattern.test(attributeName));
   }
 
   public shutdown(): Promise<void> {

@@ -6,13 +6,14 @@ import { BatchSpanProcessor, InMemorySpanExporter, NodeTracerProvider } from '@o
 import expect from 'expect';
 import {
   AttributeRedactingSpanProcessor,
+  ENV_ADOT_REDACT_SPAN_EVENT_ATTRIBUTES,
   ENV_ADOT_REDACT_SPAN_ATTRIBUTES,
   REDACTED_VALUE,
 } from '../src/attribute-redacting-span-processor';
 
 interface RedactionTestData {
   name: string;
-  environmentValue: string;
+  environmentVariables: Record<string, string>;
   spanAttributes: Attributes;
   eventAttributes: Attributes;
   expectedSpanAttributes: Attributes;
@@ -23,13 +24,17 @@ describe('AttributeRedactingSpanProcessorTest', () => {
   it('should redact all attributes that match configured patterns', async () => {
     const testCases: RedactionTestData[] = [
       {
-        name: 'configured attribute names',
-        environmentValue: ' user.email, request.body, db.statement, gen_ai.prompt, user.email ',
+        name: 'independent configured attribute names',
+        environmentVariables: {
+          [ENV_ADOT_REDACT_SPAN_ATTRIBUTES]: ' user.email, request.body, db.statement, gen_ai.prompt, user.email ',
+          [ENV_ADOT_REDACT_SPAN_EVENT_ATTRIBUTES]: ' db.statement, event.secret ',
+        },
         spanAttributes: {
           'user.email': 'user@example.com',
           'request.body': '{"password":"secret"}',
           'db.statement': 'SELECT * FROM users',
           'gen_ai.prompt': 'private prompt',
+          'event.secret': 'span value',
           'http.request.method': 'POST',
           'server.address': 'example.com',
         },
@@ -37,6 +42,7 @@ describe('AttributeRedactingSpanProcessorTest', () => {
           'user.email': 'event-user@example.com',
           'db.statement': "UPDATE users SET password = 'secret'",
           'gen_ai.prompt': 'private event prompt',
+          'event.secret': 'event value',
           'event.safe': 'keep me',
         },
         expectedSpanAttributes: {
@@ -44,19 +50,24 @@ describe('AttributeRedactingSpanProcessorTest', () => {
           'request.body': REDACTED_VALUE,
           'db.statement': REDACTED_VALUE,
           'gen_ai.prompt': REDACTED_VALUE,
+          'event.secret': 'span value',
           'http.request.method': 'POST',
           'server.address': 'example.com',
         },
         expectedEventAttributes: {
-          'user.email': REDACTED_VALUE,
+          'user.email': 'event-user@example.com',
           'db.statement': REDACTED_VALUE,
-          'gen_ai.prompt': REDACTED_VALUE,
+          'gen_ai.prompt': 'private event prompt',
+          'event.secret': REDACTED_VALUE,
           'event.safe': 'keep me',
         },
       },
       {
         name: 'wildcard only',
-        environmentValue: '*',
+        environmentVariables: {
+          [ENV_ADOT_REDACT_SPAN_ATTRIBUTES]: '*',
+          [ENV_ADOT_REDACT_SPAN_EVENT_ATTRIBUTES]: '*',
+        },
         spanAttributes: { first: 'secret', second: 42, third: true },
         eventAttributes: { 'event.first': 'secret', 'event.second': 42 },
         expectedSpanAttributes: {
@@ -71,7 +82,10 @@ describe('AttributeRedactingSpanProcessorTest', () => {
       },
       {
         name: 'prefix wildcard',
-        environmentValue: 'http.*',
+        environmentVariables: {
+          [ENV_ADOT_REDACT_SPAN_ATTRIBUTES]: 'http.*',
+          [ENV_ADOT_REDACT_SPAN_EVENT_ATTRIBUTES]: 'http.*',
+        },
         spanAttributes: {
           'http.request.method': 'GET',
           'http.response.status_code': 200,
@@ -93,7 +107,10 @@ describe('AttributeRedactingSpanProcessorTest', () => {
       },
       {
         name: 'suffix wildcard',
-        environmentValue: '*.body',
+        environmentVariables: {
+          [ENV_ADOT_REDACT_SPAN_ATTRIBUTES]: '*.body',
+          [ENV_ADOT_REDACT_SPAN_EVENT_ATTRIBUTES]: '*.body',
+        },
         spanAttributes: {
           'request.body': 'secret',
           'response.body': 'secret',
@@ -115,7 +132,10 @@ describe('AttributeRedactingSpanProcessorTest', () => {
       },
       {
         name: 'multiple wildcard segments',
-        environmentValue: 'gen_ai.*.content',
+        environmentVariables: {
+          [ENV_ADOT_REDACT_SPAN_ATTRIBUTES]: 'gen_ai.*.content',
+          [ENV_ADOT_REDACT_SPAN_EVENT_ATTRIBUTES]: 'gen_ai.*.content',
+        },
         spanAttributes: {
           'gen_ai.input.content': 'secret input',
           'gen_ai.output.content': 'secret output',
@@ -137,7 +157,10 @@ describe('AttributeRedactingSpanProcessorTest', () => {
       },
       {
         name: 'wildcard mixed with explicit names',
-        environmentValue: 'user.email,http.*',
+        environmentVariables: {
+          [ENV_ADOT_REDACT_SPAN_ATTRIBUTES]: 'user.email,http.*',
+          [ENV_ADOT_REDACT_SPAN_EVENT_ATTRIBUTES]: 'user.email,http.*',
+        },
         spanAttributes: {
           'user.email': 'user@example.com',
           'http.route': '/users',
@@ -170,7 +193,10 @@ describe('AttributeRedactingSpanProcessorTest', () => {
     const testCases: RedactionTestData[] = [
       {
         name: 'empty configuration',
-        environmentValue: '',
+        environmentVariables: {
+          [ENV_ADOT_REDACT_SPAN_ATTRIBUTES]: '',
+          [ENV_ADOT_REDACT_SPAN_EVENT_ATTRIBUTES]: '',
+        },
         spanAttributes: { 'user.email': 'user@example.com' },
         eventAttributes: { 'user.email': 'event-user@example.com' },
         expectedSpanAttributes: { 'user.email': 'user@example.com' },
@@ -178,7 +204,10 @@ describe('AttributeRedactingSpanProcessorTest', () => {
       },
       {
         name: 'empty comma-separated entries',
-        environmentValue: ' , , ',
+        environmentVariables: {
+          [ENV_ADOT_REDACT_SPAN_ATTRIBUTES]: ' , , ',
+          [ENV_ADOT_REDACT_SPAN_EVENT_ATTRIBUTES]: ' , , ',
+        },
         spanAttributes: { 'request.body': 'secret' },
         eventAttributes: { 'request.body': 'event secret' },
         expectedSpanAttributes: { 'request.body': 'secret' },
@@ -186,7 +215,10 @@ describe('AttributeRedactingSpanProcessorTest', () => {
       },
       {
         name: 'whitespace-only configuration',
-        environmentValue: ' \t ',
+        environmentVariables: {
+          [ENV_ADOT_REDACT_SPAN_ATTRIBUTES]: ' \t ',
+          [ENV_ADOT_REDACT_SPAN_EVENT_ATTRIBUTES]: ' \t ',
+        },
         spanAttributes: { 'db.statement': 'SELECT * FROM users' },
         eventAttributes: { 'db.statement': 'DELETE FROM users' },
         expectedSpanAttributes: { 'db.statement': 'SELECT * FROM users' },
@@ -194,7 +226,10 @@ describe('AttributeRedactingSpanProcessorTest', () => {
       },
       {
         name: 'unsupported regular expression',
-        environmentValue: 'http\\.request\\..+',
+        environmentVariables: {
+          [ENV_ADOT_REDACT_SPAN_ATTRIBUTES]: 'http\\.request\\..+',
+          [ENV_ADOT_REDACT_SPAN_EVENT_ATTRIBUTES]: 'http\\.request\\..+',
+        },
         spanAttributes: { 'http.request.method': 'POST' },
         eventAttributes: { 'http.request.body': 'secret' },
         expectedSpanAttributes: { 'http.request.method': 'POST' },
@@ -202,7 +237,10 @@ describe('AttributeRedactingSpanProcessorTest', () => {
       },
       {
         name: 'unsupported regular expression anchors',
-        environmentValue: '^user.email$',
+        environmentVariables: {
+          [ENV_ADOT_REDACT_SPAN_ATTRIBUTES]: '^user.email$',
+          [ENV_ADOT_REDACT_SPAN_EVENT_ATTRIBUTES]: '^user.email$',
+        },
         spanAttributes: { 'user.email': 'user@example.com' },
         eventAttributes: { 'user.email': 'event-user@example.com' },
         expectedSpanAttributes: { 'user.email': 'user@example.com' },
@@ -210,7 +248,10 @@ describe('AttributeRedactingSpanProcessorTest', () => {
       },
       {
         name: 'unsupported regular expression character class',
-        environmentValue: 'http.request.[a-z]+',
+        environmentVariables: {
+          [ENV_ADOT_REDACT_SPAN_ATTRIBUTES]: 'http.request.[a-z]+',
+          [ENV_ADOT_REDACT_SPAN_EVENT_ATTRIBUTES]: 'http.request.[a-z]+',
+        },
         spanAttributes: { 'http.request.method': 'POST' },
         eventAttributes: { 'http.request.body': 'secret' },
         expectedSpanAttributes: { 'http.request.method': 'POST' },
@@ -218,7 +259,10 @@ describe('AttributeRedactingSpanProcessorTest', () => {
       },
       {
         name: 'unsupported regular expression alternation',
-        environmentValue: 'user.email|request.body',
+        environmentVariables: {
+          [ENV_ADOT_REDACT_SPAN_ATTRIBUTES]: 'user.email|request.body',
+          [ENV_ADOT_REDACT_SPAN_EVENT_ATTRIBUTES]: 'user.email|request.body',
+        },
         spanAttributes: {
           'user.email': 'user@example.com',
           'request.body': 'secret',
@@ -238,7 +282,10 @@ describe('AttributeRedactingSpanProcessorTest', () => {
       },
       {
         name: 'unsupported question mark wildcard',
-        environmentValue: 'http.request.?',
+        environmentVariables: {
+          [ENV_ADOT_REDACT_SPAN_ATTRIBUTES]: 'http.request.?',
+          [ENV_ADOT_REDACT_SPAN_EVENT_ATTRIBUTES]: 'http.request.?',
+        },
         spanAttributes: { 'http.request.method': 'POST' },
         eventAttributes: { 'http.request.body': 'secret' },
         expectedSpanAttributes: { 'http.request.method': 'POST' },
@@ -246,7 +293,10 @@ describe('AttributeRedactingSpanProcessorTest', () => {
       },
       {
         name: 'malformed bracket pattern',
-        environmentValue: 'http.request.[',
+        environmentVariables: {
+          [ENV_ADOT_REDACT_SPAN_ATTRIBUTES]: 'http.request.[',
+          [ENV_ADOT_REDACT_SPAN_EVENT_ATTRIBUTES]: 'http.request.[',
+        },
         spanAttributes: { 'http.request.method': 'POST' },
         eventAttributes: { 'http.request.body': 'secret' },
         expectedSpanAttributes: { 'http.request.method': 'POST' },
@@ -254,7 +304,10 @@ describe('AttributeRedactingSpanProcessorTest', () => {
       },
       {
         name: 'attribute name containing comma',
-        environmentValue: 'custom,attribute',
+        environmentVariables: {
+          [ENV_ADOT_REDACT_SPAN_ATTRIBUTES]: 'custom,attribute',
+          [ENV_ADOT_REDACT_SPAN_EVENT_ATTRIBUTES]: 'custom,attribute',
+        },
         spanAttributes: { 'custom,attribute': 'secret' },
         eventAttributes: { 'custom,attribute': 'event secret' },
         expectedSpanAttributes: { 'custom,attribute': 'secret' },
@@ -269,12 +322,15 @@ describe('AttributeRedactingSpanProcessorTest', () => {
 });
 
 async function assertRedaction(testData: RedactionTestData): Promise<void> {
-  const previousEnvironmentValue = process.env[ENV_ADOT_REDACT_SPAN_ATTRIBUTES];
+  const previousEnvironmentVariables: NodeJS.ProcessEnv = {};
+  Object.keys(testData.environmentVariables).forEach(environmentVariable => {
+    previousEnvironmentVariables[environmentVariable] = process.env[environmentVariable];
+  });
   const exporter = new InMemorySpanExporter();
   let provider: NodeTracerProvider | undefined;
 
   try {
-    process.env[ENV_ADOT_REDACT_SPAN_ATTRIBUTES] = testData.environmentValue;
+    Object.assign(process.env, testData.environmentVariables);
     provider = new NodeTracerProvider({
       spanProcessors: [new AttributeRedactingSpanProcessor(), new BatchSpanProcessor(exporter)],
     });
@@ -294,10 +350,12 @@ async function assertRedaction(testData: RedactionTestData): Promise<void> {
     expect(finishedSpans[0].events[0].attributes).toEqual(testData.expectedEventAttributes);
   } finally {
     await provider?.shutdown();
-    if (previousEnvironmentValue === undefined) {
-      delete process.env[ENV_ADOT_REDACT_SPAN_ATTRIBUTES];
-    } else {
-      process.env[ENV_ADOT_REDACT_SPAN_ATTRIBUTES] = previousEnvironmentValue;
-    }
+    Object.entries(previousEnvironmentVariables).forEach(([environmentVariable, previousValue]) => {
+      if (previousValue === undefined) {
+        delete process.env[environmentVariable];
+      } else {
+        process.env[environmentVariable] = previousValue;
+      }
+    });
   }
 }
