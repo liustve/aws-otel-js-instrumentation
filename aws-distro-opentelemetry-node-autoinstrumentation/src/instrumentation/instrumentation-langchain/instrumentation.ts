@@ -96,9 +96,28 @@ export class LangChainInstrumentation extends InstrumentationBase<LangChainInstr
             (m: any) => this._patchToolsModule(m),
             (m: any) => this._unpatchToolsModule(m)
           ),
+          // Not a patch: hands the callback handler the application's own message helpers, so that
+          // it never has to require('@langchain/core') from a path the distro cannot resolve.
+          ...moduleFiles(
+            '@langchain/core/dist/messages/index',
+            (m: any) => {
+              this._setLangChainMessagesModule(m);
+              return m;
+            },
+            (m: any) => {
+              this._setLangChainMessagesModule(undefined);
+              return m;
+            }
+          ),
         ]
       ),
     ];
+  }
+
+  // Lazy require, like the handler itself, to keep enable() cheap when LangChain is never used.
+  private _setLangChainMessagesModule(messagesModule: any): void {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    require('./callback-handler').setLangChainMessagesModule(messagesModule);
   }
 
   _patchCallbackManager(CallbackManager: any): void {
