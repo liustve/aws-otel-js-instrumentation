@@ -145,6 +145,26 @@ export const detectConflictingInstrumentation = (shortName: string): string | un
   return undefined;
 };
 
+export const tryWrap = (wrap: () => void, target: string): boolean => {
+  try {
+    wrap();
+    return true;
+  } catch (error) {
+    diag.debug(`Failed to wrap ${target}, instrumentation may be incomplete`, error);
+    return false;
+  }
+};
+
+export const tryUnwrap = (unwrap: () => void, target: string): boolean => {
+  try {
+    unwrap();
+    return true;
+  } catch (error) {
+    diag.debug(`Failed to unwrap ${target}`, error);
+    return false;
+  }
+};
+
 export const checkDigits = (str: string): boolean => {
   return /^\d+$/.test(str);
 };

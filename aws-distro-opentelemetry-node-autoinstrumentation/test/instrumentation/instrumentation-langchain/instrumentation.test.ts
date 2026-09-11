@@ -410,6 +410,28 @@ describe('patch and unpatch lifecycle', function () {
     expect(BaseChatModel.prototype._generateUncached).not.toBe(originalGenerate);
     expect(StructuredTool.prototype.call).not.toBe(originalCall);
   });
+
+  it('calls the original method when callback handler injection fails', function () {
+    const isolatedInstrumentation = new LangChainInstrumentation();
+    const callbackManager = {
+      _configureSync(handlers: unknown): unknown {
+        return handlers;
+      },
+    };
+
+    Object.defineProperty(isolatedInstrumentation, '_handler', {
+      configurable: true,
+      get() {
+        throw new Error('instrumentation setup failed');
+      },
+      set() {},
+    });
+
+    isolatedInstrumentation._patchCallbackManager(callbackManager);
+    const handlers = ['application-handler'];
+    expect(callbackManager._configureSync(handlers)).toBe(handlers);
+    isolatedInstrumentation._unpatchCallbackManager(callbackManager);
+  });
 });
 
 describe('basic chat spans', function () {
