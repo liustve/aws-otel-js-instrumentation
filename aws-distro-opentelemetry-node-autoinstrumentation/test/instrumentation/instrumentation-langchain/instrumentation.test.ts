@@ -434,6 +434,90 @@ describe('patch and unpatch lifecycle', function () {
   });
 });
 
+describe('wrapper failure resilience', function () {
+  this.timeout(60000);
+
+  it('keeps a real LangChain agent responsive when wrapping or unwrapping fails', function () {
+    const packageRoot = path.resolve(__dirname, '..', '..', '..');
+    const tsNodeRegister = require.resolve('ts-node/register/transpile-only');
+    const script = `
+const mode = process.argv[1];
+const { LangChainInstrumentation } = require(${JSON.stringify(
+      path.join(packageRoot, 'src', 'instrumentation', 'instrumentation-langchain', 'instrumentation.ts')
+    )});
+const { CallbackManager } = require('@langchain/core/callbacks/manager');
+const { BaseChatModel } = require('@langchain/core/language_models/chat_models');
+const { StructuredTool } = require('@langchain/core/tools');
+const { FakeListChatModel } = require('@langchain/core/utils/testing');
+const { createReactAgent } = require('@langchain/langgraph/prebuilt');
+
+(async () => {
+  const instrumentation = new LangChainInstrumentation();
+  const chatExports = { BaseChatModel };
+  const toolExports = { StructuredTool };
+  let forcedFailures = 0;
+  const fail = () => {
+    forcedFailures++;
+    throw new Error('forced ' + mode + ' failure');
+  };
+
+  if (mode === 'wrap') {
+    instrumentation._wrap = fail;
+    instrumentation._patchCallbackManager(CallbackManager);
+    instrumentation._patchChatModelsModule(chatExports);
+    instrumentation._patchToolsModule(toolExports);
+  } else {
+    instrumentation._patchCallbackManager(CallbackManager);
+    instrumentation._patchChatModelsModule(chatExports);
+    instrumentation._patchToolsModule(toolExports);
+    instrumentation._unwrap = fail;
+    instrumentation._unpatchCallbackManager(CallbackManager);
+    instrumentation._unpatchChatModelsModule(chatExports);
+    instrumentation._unpatchToolsModule(toolExports);
+  }
+
+  if (forcedFailures === 0) throw new Error('the test did not force a wrapper failure');
+
+  const model = new FakeListChatModel({ responses: ['langchain agent still works'] });
+  const agent = createReactAgent({ llm: model, tools: [] });
+  const result = await agent.invoke({ messages: [{ role: 'user', content: 'hi' }] });
+  const response = result.messages[result.messages.length - 1];
+  process.stdout.write('__RESULT__' + String(response.content));
+})().catch(error => {
+  process.stderr.write('APP_ERROR ' + ((error && error.stack) || String(error)) + '\\n');
+  process.exit(1);
+});
+`;
+
+    for (const mode of ['wrap', 'unwrap']) {
+      const result = spawnSync(process.execPath, ['--require', tsNodeRegister, '-e', script, mode], {
+        cwd: packageRoot,
+        timeout: 60000,
+        killSignal: 'SIGKILL',
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          TS_NODE_PROJECT: path.join(packageRoot, 'tsconfig.json'),
+          TS_NODE_TRANSPILE_ONLY: 'true',
+          OTEL_NODE_RESOURCE_DETECTORS: 'none',
+          OTEL_TRACES_EXPORTER: 'none',
+          OTEL_METRICS_EXPORTER: 'none',
+          OTEL_LOGS_EXPORTER: 'none',
+          OTEL_AWS_SERVICE_EVENTS_ENABLED: 'false',
+        },
+      });
+
+      assert.ifError(result.error);
+      assert.strictEqual(
+        result.status,
+        0,
+        `LangChain ${mode} failure exited ${result.status}\nstdout: ${result.stdout}\nstderr: ${result.stderr}`
+      );
+      expect(result.stdout).toContain('__RESULT__langchain agent still works');
+    }
+  });
+});
+
 describe('basic chat spans', function () {
   this.timeout(10000);
 
