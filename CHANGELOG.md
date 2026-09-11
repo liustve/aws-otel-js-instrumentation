@@ -14,6 +14,7 @@ If your change does not need a CHANGELOG entry, add the "skip changelog" label t
 ## Unreleased
 
 - fix(agentic): fail open when instrumentation wrapping fails
+  ([#553](https://github.com/aws-observability/aws-otel-js-instrumentation/pull/553))
 - fix(langchain): remove runtime dependency on `@langchain/core`
   ([#551](https://github.com/aws-observability/aws-otel-js-instrumentation/pull/551))
 - fix(vercel-ai): map missing AI SDK telemetry to OTel GenAI attributes and output messages
