@@ -479,6 +479,9 @@ const { createReactAgent } = require('@langchain/langgraph/prebuilt');
   if (forcedFailures === 0) throw new Error('the test did not force a wrapper failure');
 
   const model = new FakeListChatModel({ responses: ['langchain agent still works'] });
+  if (typeof model.bindTools !== 'function') {
+    model.bindTools = () => model;
+  }
   const agent = createReactAgent({ llm: model, tools: [] });
   const result = await agent.invoke({ messages: [{ role: 'user', content: 'hi' }] });
   const response = result.messages[result.messages.length - 1];
