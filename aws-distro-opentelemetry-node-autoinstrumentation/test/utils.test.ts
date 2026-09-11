@@ -14,8 +14,6 @@ import {
   isAccountId,
   OTEL_BAGGAGE_SPAN_ATTRIBUTE_KEYS,
   REDACTED_QUERY_PARAMS,
-  tryWrap,
-  tryUnwrap,
 } from '../src/utils';
 // Upstream default list that `redactedQueryParams` REPLACES (does not extend). Imported here so
 // the test fails if a dependency bump adds/removes an upstream default we no longer re-include.
@@ -149,22 +147,6 @@ describe('Utils', function () {
 
   it('Test detectConflictingInstrumentation returns undefined when no conflicts installed', () => {
     expect(detectConflictingInstrumentation('aws_langchain')).toBeUndefined();
-  });
-
-  it('Test tryWrap and tryUnwrap fail open', () => {
-    expect(tryWrap(() => {}, 'test.method')).toBeTruthy();
-    expect(
-      tryWrap(() => {
-        throw new Error('wrap failed');
-      }, 'test.method')
-    ).toBeFalsy();
-
-    expect(tryUnwrap(() => {}, 'test.method')).toBeTruthy();
-    expect(
-      tryUnwrap(() => {
-        throw new Error('unwrap failed');
-      }, 'test.method')
-    ).toBeFalsy();
   });
 
   it('Test checkDigits', () => {

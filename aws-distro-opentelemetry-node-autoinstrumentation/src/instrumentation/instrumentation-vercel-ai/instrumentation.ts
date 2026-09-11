@@ -12,9 +12,8 @@ import {
   isAgenticInstrumentationOptIn,
   isInstrumentationDisabled,
   detectConflictingInstrumentation,
-  tryWrap,
-  tryUnwrap,
 } from '../../utils';
+import { tryWrap, tryUnwrap } from '../common/instrumentation-utils';
 
 export const INSTRUMENTATION_NAME = '@aws/aws-distro-opentelemetry-instrumentation-vercel-ai';
 export const INSTRUMENTATION_SHORT_NAME = 'aws_vercel_ai';

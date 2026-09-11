@@ -145,34 +145,6 @@ export const detectConflictingInstrumentation = (shortName: string): string | un
   return undefined;
 };
 
-/**
- * Installs an instrumentation wrapper without allowing a patching failure to interrupt
- * application module loading. Returns whether the wrapper was installed successfully.
- */
-export const tryWrap = (wrap: () => void, target: string): boolean => {
-  try {
-    wrap();
-    return true;
-  } catch (error) {
-    diag.debug(`Failed to wrap ${target}, instrumentation may be incomplete`, error);
-    return false;
-  }
-};
-
-/**
- * Removes an instrumentation wrapper without allowing cleanup failures to propagate into
- * the application. Returns whether the wrapper was removed successfully.
- */
-export const tryUnwrap = (unwrap: () => void, target: string): boolean => {
-  try {
-    unwrap();
-    return true;
-  } catch (error) {
-    diag.debug(`Failed to unwrap ${target}`, error);
-    return false;
-  }
-};
-
 export const checkDigits = (str: string): boolean => {
   return /^\d+$/.test(str);
 };
