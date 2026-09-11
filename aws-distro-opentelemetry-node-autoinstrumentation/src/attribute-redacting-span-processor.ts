@@ -5,7 +5,7 @@ import { Attributes } from '@opentelemetry/api';
 import { ReadableSpan, SpanProcessor } from '@opentelemetry/sdk-trace-base';
 
 export const ENV_ADOT_REDACT_SPAN_ATTRIBUTES = 'ADOT_REDACT_SPAN_ATTRIBUTES';
-export const REDACTED_VALUE = 'REDACTED';
+export const REDACTED_VALUE = '[REDACTED]';
 
 /**
  * Redacts configured attributes on completed spans, their events, and their links.
@@ -13,7 +13,7 @@ export const REDACTED_VALUE = 'REDACTED';
  * Attribute names can be supplied to the constructor or through the
  * ADOT_REDACT_SPAN_ATTRIBUTES environment variable as a comma-separated list.
  * Each entry can be an exact attribute name or contain * wildcards. Matching
- * attribute values are replaced with REDACTED in place while attribute names
+ * attribute values are replaced with [REDACTED] in place while attribute names
  * and non-matching values remain unchanged.
  *
  * Redact several exact attributes, every attribute beginning with
